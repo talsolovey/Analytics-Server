@@ -1,12 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import sqlite3
 
-# Pydantic model for incoming request data
+# Pydantic models
 class EventData(BaseModel):
     userid: str
     eventname: str
+
+class ReportRequest(BaseModel):
+    lastseconds: int
+    userid: str
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -50,4 +54,40 @@ def process_event(event_data: EventData):
         "eventtimestamputc": eventtimestamputc,
         "userid": event_data.userid,
         "eventname": event_data.eventname
+    }
+
+@app.get("/get_reports")
+def get_reports(report_req: ReportRequest):
+    """
+    Returns all events for the given 'userid' that occurred
+    within the last 'lastseconds' seconds.
+    """
+
+    # Calculate the cutoff time
+    now_utc = datetime.now(timezone.utc)
+    cutoff_datetime = now_utc - timedelta(seconds=report_req.lastseconds)
+    cutoff_str = cutoff_datetime.isoformat()
+
+    # Retrieve matching events from the database
+    cursor.execute('''
+        SELECT id, eventtimestamputc, userid, eventname
+          FROM events
+         WHERE userid = ?
+           AND eventtimestamputc >= ?
+         ORDER BY eventtimestamputc DESC
+    ''', (report_req.userid, cutoff_str))
+    rows = cursor.fetchall()
+
+    # Convert rows to a list of dicts for JSON response
+    events_list = []
+    for row in rows:
+        events_list.append({
+            "id": row[0],
+            "eventtimestamputc": row[1],
+            "userid": row[2],
+            "eventname": row[3]
+        })
+
+    return {
+        "events": events_list
     }
