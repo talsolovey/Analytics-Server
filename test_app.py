@@ -6,8 +6,10 @@ from typing import Tuple, Dict, Any
 # Initialize the FastAPI test client
 client = TestClient(app)
 
+from typing import Generator
+
 @pytest.fixture(autouse=True)
-def setup_and_teardown_db() -> None:
+def setup_and_teardown_db() -> Generator[None, None, None]:
     """
     A fixture that clears the 'events' table before and after each test,
     ensuring each test runs in a clean state.
