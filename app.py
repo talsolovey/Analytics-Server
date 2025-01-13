@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 import sqlite3
+from typing import Dict, List, Any
 
 # Pydantic models
 class EventData(BaseModel):
@@ -32,7 +33,7 @@ cursor.execute('''
 conn.commit()
 
 @app.post("/process_event")
-def process_event(event_data: EventData):
+def process_event(event_data: EventData) -> Dict[str, str]:
     """
     Save data into an SQLite database with:
       - eventtimestamputc (UTC time)
@@ -57,7 +58,7 @@ def process_event(event_data: EventData):
     }
 
 @app.get("/get_reports")
-def get_reports(report_req: ReportRequest):
+def get_reports(report_req: ReportRequest) -> Dict[str, List[Dict[str, Any]]]:
     """
     Returns all events for the given 'userid' that occurred
     within the last 'lastseconds' seconds.

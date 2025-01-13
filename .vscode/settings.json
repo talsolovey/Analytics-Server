@@ -1,0 +1,9 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/0cfde4a0-d1ce-4a45-a53d-d7326952ede5/resourceGroups/assignment2/providers/Microsoft.Web/sites/analytics-server",
+    "appService.deploySubpath": ".",
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
