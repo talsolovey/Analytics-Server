@@ -3,6 +3,7 @@ import random
 from joblib import Parallel, delayed
 from typing import Dict
 import logging
+from colorama import Fore, Style
 
 # Configure logging
 logging.basicConfig(
@@ -11,13 +12,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Add colorized log methods
+def info_color(message):
+    logger.info(Fore.GREEN + message + Style.RESET_ALL)
+
+def warning_color(message):
+    logger.warning(Fore.YELLOW + message + Style.RESET_ALL)
+
+def error_color(message):
+    logger.error(Fore.RED + message + Style.RESET_ALL)
+
 # Azure-hosted app's URL
 API_URL = "http://analytics-server.eastus.azurecontainer.io:8000/process_event"
 
 # Pool of user names.
 USER_POOL = ["alice", "bob", "charlie", "dave", "eve"]
-         
-             
+
+
 # Generate random user IDs and event names
 def generate_random_data() -> Dict[str, str]:
     userid = random.choice(USER_POOL)
@@ -44,7 +55,7 @@ def send_request(data: Dict[str, str]) -> None:
 # Main function to send 1,000 requests in parallel
 def main() -> None:
     # Generate 1,000 random events
-    events = [generate_random_data() for _ in range(100)]
+    events = [generate_random_data() for _ in range(1000)]
 
     # Use joblib to send requests in parallel
     all_results = Parallel(n_jobs=4)(delayed(send_request)(event) for event in events)
@@ -57,11 +68,15 @@ def main() -> None:
         final_results["failed_requests"].extend(result["failed_requests"])
 
     # Log summary after all requests
-    logger.info("Batch completed: %d successful, %d failed.", final_results["success"], final_results["failure"])
+    info_color(f"Batch completed: {final_results['success']} successful, {final_results['failure']} failed.")
 
     # Log failed requests (if any)
     if final_results["failed_requests"]:
-        logger.warning("Failed requests: %s", final_results["failed_requests"])
+        formatted_failed_requests = "\n".join(
+            f"  - UserID: {item['data']['userid']}, Event: {item['data']['eventname']}, Status: {item.get('status_code', 'N/A')}, Response: {item.get('response', item.get('error', 'N/A'))}"
+            for item in final_results["failed_requests"]
+        )
+        warning_color(f"Failed requests:\n{formatted_failed_requests}")
 
 if __name__ == "__main__":
     main()
