@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 from typing import Dict
 
 # Azure-hosted app's URL
-API_URL = "https://my-analytics-server.azurewebsites.net/process_event"
+API_URL = "http://analytics-demo.eastus.azurecontainer.io:8000/process_event"
 
 # Generate random user IDs and event names
 def generate_random_data() -> Dict[str, str]:
@@ -30,7 +30,7 @@ def main() -> None:
     events = [generate_random_data() for _ in range(1000)]
 
     # Use joblib to send requests in parallel
-    Parallel(n_jobs=5)(delayed(send_request)(event) for event in events)
+    Parallel(n_jobs=4)(delayed(send_request)(event) for event in events)
 
 if __name__ == "__main__":
     main()
