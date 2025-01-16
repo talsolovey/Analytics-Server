@@ -71,7 +71,12 @@ def process_event(event_data: EventData) -> Dict[str, str]:
     except Exception as e:
         logger.exception("Error processing event for userid: %s", event_data.userid)
 
-    return {"status": "success", "eventtimestamputc": eventtimestamputc}
+    return {
+        "status": "success",
+        "eventtimestamputc": eventtimestamputc,
+        "userid": event_data.userid,
+        "eventname": event_data.eventname,
+    }
 
 
 @app.get("/get_reports")
