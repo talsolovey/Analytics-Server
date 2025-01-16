@@ -7,6 +7,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import json
 
+
 # Configure logging
 handler = RotatingFileHandler("app.log", maxBytes=1_000_000, backupCount=3)
 logging.basicConfig(
@@ -16,6 +17,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 # Pydantic models
 class EventData(BaseModel):
     userid: str
@@ -24,6 +26,7 @@ class EventData(BaseModel):
 class ReportRequest(BaseModel):
     lastseconds: int
     userid: str
+
 
 # Initialize FastAPI app
 app = FastAPI()
