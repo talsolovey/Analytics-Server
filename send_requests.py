@@ -1,15 +1,25 @@
 import requests
 import random
-import string
 from joblib import Parallel, delayed
 from typing import Dict
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 # Azure-hosted app's URL
-API_URL = "http://analytics-demo.eastus.azurecontainer.io:8000/process_event"
+API_URL = "http://analytics-server.eastus.azurecontainer.io:8000/process_event"
 
+# Pool of user names.
+USER_POOL = ["alice", "bob", "charlie", "dave", "eve"]
+             
 # Generate random user IDs and event names
 def generate_random_data() -> Dict[str, str]:
-    userid = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    userid = random.choice(USER_POOL)
     eventname = random.choice(["eventA", "eventB", "eventC", "eventD"])
     return {"userid": userid, "eventname": eventname}
 
@@ -18,11 +28,11 @@ def send_request(data: Dict[str, str]) -> None:
     try:
         response = requests.post(API_URL, json=data)
         if response.status_code == 200:
-            print(f"Successfully sent: {data}")
+            logging.info("Successfully sent: %s", data)
         else:
-            print(f"Failed to send: {data}, Status Code: {response.status_code}")
+            logging.error("Failed to send: %s, Status Code: %s", data, response.status_code)
     except Exception as e:
-        print(f"Error sending request: {e}")
+        logging.exception("Error sending request: %s", data)
 
 # Main function to send 1,000 requests in parallel
 def main() -> None:
