@@ -44,7 +44,7 @@ jobs:
             # Create or update the container
             az container create \
               --resource-group ${{ secrets.RESOURCE_GROUP }} \
-              --name ${{ secrets.CONTAINER_NAME }} \
+              --name analytics-server-container \
               --image ${{ secrets.REGISTRY_NAME }}.azurecr.io/analytics-server:latest \
               --registry-login-server ${{ secrets.REGISTRY_NAME }}.azurecr.io \
               --registry-username ${{ secrets.REGISTRY_USERNAME }} \
@@ -61,5 +61,5 @@ jobs:
           inlineScript: |
             az container show \
               --resource-group ${{ secrets.RESOURCE_GROUP }} \
-              --name ${{ secrets.CONTAINER_NAME }} \
+              --name analytics-server-container \
               --output table
