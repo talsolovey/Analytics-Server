@@ -1,0 +1,65 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+      - name: Build Docker image
+        run: |
+          docker build -t analytics-server .
+
+      - name: Tag image for ACR
+        run: |
+          docker tag analytics-server:latest \
+          ${{ secrets.REGISTRY_NAME }}.azurecr.io/analytics-server:latest
+
+      - name: Azure Docker Login
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Push to ACR
+        run: |
+          docker push ${{ secrets.REGISTRY_NAME }}.azurecr.io/analytics-server:latest
+
+      - name: Deploy to ACI
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            # Create or update the container
+            az container create \
+              --resource-group ${{ secrets.RESOURCE_GROUP }} \
+              --name ${{ secrets.CONTAINER_NAME }} \
+              --image ${{ secrets.REGISTRY_NAME }}.azurecr.io/analytics-server:latest \
+              --registry-login-server ${{ secrets.REGISTRY_NAME }}.azurecr.io \
+              --registry-username ${{ secrets.REGISTRY_USERNAME }} \
+              --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
+              --os-type Linux \
+              --dns-name-label ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }} \
+              --ports 8000 \
+              --cpu 1 \
+              --memory 1
+
+      - name: Show ACI status
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az container show \
+              --resource-group ${{ secrets.RESOURCE_GROUP }} \
+              --name ${{ secrets.CONTAINER_NAME }} \
+              --output table
