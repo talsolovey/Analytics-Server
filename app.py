@@ -3,6 +3,18 @@ from pydantic import BaseModel
 from datetime import datetime, timezone, timedelta
 import sqlite3
 from typing import Dict, List, Any
+import logging
+from logging.handlers import RotatingFileHandler
+import json
+
+# Configure logging
+handler = RotatingFileHandler("app.log", maxBytes=1_000_000, backupCount=3)
+logging.basicConfig(
+    handlers=[handler],
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Pydantic models
 class EventData(BaseModel):
@@ -16,8 +28,7 @@ class ReportRequest(BaseModel):
 # Initialize FastAPI app
 app = FastAPI()
 
-# --- Database setup ---
-# Create a connection to the SQLite database (will create the DB file if it doesn't exist)
+# Create a connection to the SQLite database
 conn = sqlite3.connect("events.db", check_same_thread=False)
 cursor = conn.cursor()
 
@@ -32,6 +43,7 @@ cursor.execute('''
 ''')
 conn.commit()
 
+
 @app.post("/process_event")
 def process_event(event_data: EventData) -> Dict[str, str]:
     """
@@ -43,19 +55,23 @@ def process_event(event_data: EventData) -> Dict[str, str]:
     # Get the current UTC timestamp (in ISO format, for example)
     eventtimestamputc = datetime.now(timezone.utc).isoformat()
 
-    # Insert the event data into the database
-    cursor.execute('''
-        INSERT INTO events (eventtimestamputc, userid, eventname)
-        VALUES (?, ?, ?)
-    ''', (eventtimestamputc, event_data.userid, event_data.eventname))
-    conn.commit()
+    try:
+        # Insert the event data into the database
+        cursor.execute('''
+            INSERT INTO events (eventtimestamputc, userid, eventname)
+            VALUES (?, ?, ?)
+        ''', (eventtimestamputc, event_data.userid, event_data.eventname))
+        conn.commit()
+        logger.info(json.dumps({
+            "action": "process_event",
+            "userid": event_data.userid,
+            "eventname": event_data.eventname,
+            "timestamp": eventtimestamputc,
+        }))
+    except Exception as e:
+        logger.exception("Error processing event for userid: %s", event_data.userid)
+    return {"status": "success", "eventtimestamputc": eventtimestamputc}
 
-    return {
-        "status": "success",
-        "eventtimestamputc": eventtimestamputc,
-        "userid": event_data.userid,
-        "eventname": event_data.eventname
-    }
 
 @app.get("/get_reports")
 def get_reports(report_req: ReportRequest) -> Dict[str, List[Dict[str, Any]]]:
@@ -69,15 +85,20 @@ def get_reports(report_req: ReportRequest) -> Dict[str, List[Dict[str, Any]]]:
     cutoff_datetime = now_utc - timedelta(seconds=report_req.lastseconds)
     cutoff_str = cutoff_datetime.isoformat()
 
-    # Retrieve matching events from the database
-    cursor.execute('''
-        SELECT id, eventtimestamputc, userid, eventname
-          FROM events
-         WHERE userid = ?
-           AND eventtimestamputc >= ?
-         ORDER BY eventtimestamputc DESC
-    ''', (report_req.userid, cutoff_str))
-    rows = cursor.fetchall()
+    try:
+        # Retrieve matching events from the database
+        cursor.execute('''
+            SELECT id, eventtimestamputc, userid, eventname
+            FROM events
+            WHERE userid = ?
+            AND eventtimestamputc >= ?
+            ORDER BY eventtimestamputc DESC
+        ''', (report_req.userid, cutoff_str))
+        rows = cursor.fetchall()
+        logger.info("Fetched %d events for user %s", len(rows), report_req.userid)
+    except Exception as e:
+        logger.exception("Error retrieving events for user %s", report_req.userid)
+        return {"events": []}
 
     # Convert rows to a list of dicts for JSON response
     events_list = []
