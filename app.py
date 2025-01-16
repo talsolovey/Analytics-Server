@@ -29,8 +29,8 @@ class ReportRequest(BaseModel):
 app = FastAPI()
 
 # Create a connection to the SQLite database
-conn = sqlite3.connect("events.db", check_same_thread=False)
-cursor = conn.cursor()
+conn: sqlite3.Connection = sqlite3.connect("events.db", check_same_thread=False)
+cursor: sqlite3.Cursor = conn.cursor()
 
 # Create a table if it doesn't already exist
 cursor.execute('''
@@ -53,7 +53,7 @@ def process_event(event_data: EventData) -> Dict[str, str]:
       - eventname
     """
     # Get the current UTC timestamp (in ISO format, for example)
-    eventtimestamputc = datetime.now(timezone.utc).isoformat()
+    eventtimestamputc: str = datetime.now(timezone.utc).isoformat()
 
     try:
         # Insert the event data into the database
@@ -70,6 +70,7 @@ def process_event(event_data: EventData) -> Dict[str, str]:
         }))
     except Exception as e:
         logger.exception("Error processing event for userid: %s", event_data.userid)
+
     return {"status": "success", "eventtimestamputc": eventtimestamputc}
 
 
@@ -81,9 +82,9 @@ def get_reports(report_req: ReportRequest) -> Dict[str, List[Dict[str, Any]]]:
     """
 
     # Calculate the cutoff time
-    now_utc = datetime.now(timezone.utc)
-    cutoff_datetime = now_utc - timedelta(seconds=report_req.lastseconds)
-    cutoff_str = cutoff_datetime.isoformat()
+    now_utc: datetime = datetime.now(timezone.utc)
+    cutoff_datetime: datetime = now_utc - timedelta(seconds=report_req.lastseconds)
+    cutoff_str: str = cutoff_datetime.isoformat()
 
     try:
         # Retrieve matching events from the database
@@ -94,21 +95,17 @@ def get_reports(report_req: ReportRequest) -> Dict[str, List[Dict[str, Any]]]:
             AND eventtimestamputc >= ?
             ORDER BY eventtimestamputc DESC
         ''', (report_req.userid, cutoff_str))
-        rows = cursor.fetchall()
+        rows: List[tuple] = cursor.fetchall()
         logger.info("Fetched %d events for user %s", len(rows), report_req.userid)
     except Exception as e:
         logger.exception("Error retrieving events for user %s", report_req.userid)
         return {"events": []}
 
     # Convert rows to a list of dicts for JSON response
-    events_list = []
-    for row in rows:
-        events_list.append({
-            "id": row[0],
-            "eventtimestamputc": row[1],
-            "userid": row[2],
-            "eventname": row[3]
-        })
+    events_list: List[Dict[str, Any]] = [
+        {"id": row[0], "eventtimestamputc": row[1], "userid": row[2], "eventname": row[3]}
+        for row in rows
+    ]
 
     return {
         "events": events_list
