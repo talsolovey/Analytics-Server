@@ -50,7 +50,7 @@ jobs:
               --registry-username ${{ secrets.REGISTRY_USERNAME }} \
               --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
               --os-type Linux \
-              --dns-name-label ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }} \
+              --dns-name-label analytics-server \
               --ports 8000 \
               --cpu 1 \
               --memory 1
